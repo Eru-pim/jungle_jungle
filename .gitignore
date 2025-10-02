@@ -1,0 +1,18 @@
+*.o
+*.out
+*.exe
+a.out
+
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+.vscode/settings.json
+.vscode/*.log
+
+.DS_Store
+
+# ===============
+hello.c
+tmp.*
