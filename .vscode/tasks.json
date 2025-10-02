@@ -8,7 +8,7 @@
     },
     "tasks": [
         {
-            "type": "cppbuild",
+            "type": "shell",
             "label": "Build C",
             "command": "/usr/bin/gcc",
             "args": [
@@ -25,7 +25,7 @@
             ]
         },
         {
-            "type": "cppbuild",
+            "type": "shell",
             "label": "Build C++",
             "command": "/usr/bin/g++",
             "args": [

@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  devcontainer:
+    image: erupim_ds
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: Erupim
+    hostname: Cooked_Marsh
+    volumes:
+      - ..:/workspaces/ds_docker:cached
+    command: sleep infinity
