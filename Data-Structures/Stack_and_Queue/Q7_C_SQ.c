@@ -104,7 +104,45 @@ int main()
 ////////////////////////////////////////////////////////////
 int balanced(char *expression)
 {
-/* add your code here */
+    char c;
+    Stack s;
+    s.ll.head = NULL;
+    s.ll.size = 0;
+
+    for (char *expr = expression; *expr != '\0'; expr++) {
+        switch (*expr) {
+            case '(':
+            case '{':
+            case '[':
+                push(&s, *expr);
+                break;
+            case ')':
+                c = pop(&s);
+                if (c != '(') {
+                    return 1;
+                }
+                break;
+            case '}':
+                c = pop(&s);
+                if (c != '{') {
+                    return 1;
+                }
+                break;
+            case ']':
+                c = pop(&s);
+                if (c != '[') {
+                    return 1;
+                }
+                break;
+            default:
+                return 1;
+        }
+    }
+
+    if (!isEmptyStack(&s)) {
+        return 1;
+    }
+    return 0;
 }
 
 ////////////////////////////////////////////////////////////
