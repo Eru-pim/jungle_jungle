@@ -140,6 +140,7 @@ int balanced(char *expression)
     }
 
     if (!isEmptyStack(&s)) {
+        removeAllItemsFromStack(&s);
         return 1;
     }
     return 0;
