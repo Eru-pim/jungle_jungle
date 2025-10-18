@@ -285,37 +285,20 @@ int erase_node(rbtree *t, node_t *child, node_t *parent, node_t *sibling) {
   }
 
   while (1) {
-    // Case: BLACK - Sibling: RED
+    // Case: BLACK - Sibling = RED
     if (sibling->color == RBTREE_RED) {
       parent->color = RBTREE_RED;
       sibling->color = RBTREE_BLACK;
-      if (parent == t->root) {
-        t->root = sibling;
-      } else {
-        if (parent->parent->left == parent) parent->parent->left = sibling;
-        else parent->parent->right = sibling;
-      }
-      sibling->parent = parent->parent;
 
       if (parent->left == sibling) {
-        if (sibling->right != t->nil) sibling->right->parent = parent;
-        parent->left = sibling->right;
-
-        parent->parent = sibling;
-        sibling->right = parent;
-
+        rotate_R(t, parent);
         sibling = parent->left;
       } else {
-        if (sibling->left != t->nil) sibling->left->parent = parent;
-        parent->right = sibling->left;
-
-        parent->parent = sibling;
-        sibling->left = parent;
-
+        rotate_L(t, parent);
         sibling = parent->right;
       }
     }
-    // Case: BLACK - Sibling: BLACK - Nephew: ALL BLACK
+    // Case: BLACK - Sibling = BLACK - Nephew = ALL BLACK
     else if (sibling->left->color == RBTREE_BLACK && sibling->right->color == RBTREE_BLACK) {
       sibling->color = RBTREE_RED;
       if (parent->color == RBTREE_RED || parent == t->root) {
@@ -328,49 +311,27 @@ int erase_node(rbtree *t, node_t *child, node_t *parent, node_t *sibling) {
         sibling = parent->left == child ? parent->right : parent->left;
       }
     }
-    // Case: BLACK - Sibling: BLACK - Nephew: LL RED 
+    // Case: BLACK - Sibling = BLACK - Nephew = LL RED 
     else if (parent->left == sibling && sibling->left->color == RBTREE_RED) {
       sibling->color = parent->color;
       parent->color = RBTREE_BLACK;
       sibling->left->color = RBTREE_BLACK;
 
-      if (parent == t->root) t->root = sibling;
-      else {
-        if (parent->parent->left == parent) parent->parent->left = sibling;
-        else parent->parent->right = sibling;
-      }
-      sibling->parent = parent->parent;
-
-      if (sibling->right != t->nil) sibling->right->parent = parent;
-      parent->left = sibling->right;
-
-      sibling->right = parent;
-      parent->parent = sibling;
+      rotate_R(t, parent);
       // Escape Loop
       break;
     }
-    // Case: BLACK - Sibling: BLACK - Nephew: RR RED
+    // Case: BLACK - Sibling = BLACK - Nephew = RR RED
     else if (parent->right == sibling && sibling->right->color == RBTREE_RED) {
       sibling->color = parent->color;
       parent->color = RBTREE_BLACK;
       sibling->right->color = RBTREE_BLACK;
 
-      if (parent == t->root) t->root = sibling;
-      else {
-        if (parent->parent->left == parent) parent->parent->left = sibling;
-        else parent->parent->right = sibling;
-      }
-      sibling->parent = parent->parent;
-
-      if (sibling->left != t->nil) sibling->left->parent = parent;
-      parent->right = sibling->left;
-
-      sibling->left = parent;
-      parent->parent = sibling;
+      rotate_L(t, parent);
       // Escape Loop
       break;
     }
-    // Case: BLACK - Sibling: BLACK - Nephew: Only LR RED
+    // Case: BLACK - Sibling = BLACK - Nephew = Only LR RED
     else if (parent->left == sibling && sibling->right->color == RBTREE_RED) {
       sibling->color = RBTREE_RED;
       sibling->right->color = RBTREE_BLACK;
@@ -385,7 +346,7 @@ int erase_node(rbtree *t, node_t *child, node_t *parent, node_t *sibling) {
       rotate_R(t, parent);
       // Escape Loop
       break;
-    } // Case: BLACK - Sibling: BLACK - Nephew: Only RL RED
+    } // Case: BLACK - Sibling = BLACK - Nephew = Only RL RED
     else if (parent->right == sibling && sibling->left->color == RBTREE_RED) {
       sibling->color = RBTREE_RED;
       sibling->left->color = RBTREE_BLACK;
@@ -411,7 +372,9 @@ int erase_node(rbtree *t, node_t *child, node_t *parent, node_t *sibling) {
 }
 
 int rbtree_erase(rbtree *t, node_t *p) {
-  node_t *cur, *swap, *child, *parent, *sibling;
+  node_t *cur, *swap;
+  node_t *child, *parent, *sibling;
+  key_t tmp;
 
   // Input Validation
   if (t == NULL) {
@@ -423,18 +386,9 @@ int rbtree_erase(rbtree *t, node_t *p) {
     printf("target is NULL (rbtree_erase)\n");
     return 1;
   }
-
-  cur = t->root;
-  while (cur != p) {
-    if (cur == t->nil) {
-      printf("target is not in tree (rbtree_erase)\n");
-      return 1;
-    }
-    if (p->key < cur->key) cur = cur->left;
-    else cur = cur->right;
-  }
-
-  // Sink
+  
+  // Find lowerbound > Swap
+  cur = p;
   while (cur->left != t->nil || cur->right != t->nil) {
     swap = cur;
     if (cur->right == t->nil) swap = cur->left;
@@ -444,7 +398,7 @@ int rbtree_erase(rbtree *t, node_t *p) {
         swap = swap->left;
       }
     }
-    key_t tmp = cur->key;
+    tmp = cur->key;
     cur->key = swap->key;
     swap->key = tmp;
 
@@ -454,7 +408,6 @@ int rbtree_erase(rbtree *t, node_t *p) {
   child = cur;
   parent = child->parent;
   sibling = parent->left == child ? parent->right : parent->left;
-
   return erase_node(t, child, parent, sibling);
 }
 
