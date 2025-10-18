@@ -7,10 +7,6 @@
 void delete_subtree(node_t *, node_t *);
 void rotate_L(rbtree *, node_t *);
 void rotate_R(rbtree *, node_t *);
-void insert_LL(rbtree *, node_t *, node_t *, node_t *);
-void insert_LR(rbtree *, node_t *, node_t *, node_t *);
-void insert_RL(rbtree *, node_t *, node_t *, node_t *);
-void insert_RR(rbtree *, node_t *, node_t *, node_t *);
 int erase_node(rbtree *, node_t *, node_t *, node_t *);
 
 // Use Sentinel
@@ -110,92 +106,6 @@ void rotate_R(rbtree *t, node_t *node) {
   left->right = node;
 }
 
-void insert_LL(rbtree *t, node_t *child, node_t *parent, node_t *grand) {
-  if (grand == t->root) {
-    t->root = parent;
-  } else {
-    if (grand->parent->right == grand) grand->parent->right = parent;
-    else grand->parent->left = parent;
-  }
-  parent->parent = grand->parent;
-
-  grand->left = parent->right;
-  if (parent->right != t->nil) parent->right->parent = grand;
-
-  grand->parent = parent;
-  parent->right = grand;
-
-  grand->color = RBTREE_RED;
-  parent->color = RBTREE_BLACK;
-}
-
-void insert_LR(rbtree *t, node_t *child, node_t *parent, node_t *grand) {
-  if (grand == t->root) {
-    t->root = child;
-  } else {
-    if (grand->parent->right == grand) grand->parent->right = child;
-    else grand->parent->left = child;
-  }
-  child->parent = grand->parent;
-
-  if (child->left != t->nil) child->left->parent = parent;
-  if (child->right != t->nil) child->right->parent = grand;
-  parent->right = child->left;
-  grand->left = child->right;
-
-  child->left = parent;
-  parent->parent = child;
-
-  child->right = grand;
-  grand->parent = child;
-
-  child->color = RBTREE_BLACK;
-  grand->color = RBTREE_RED;
-}
-
-void insert_RL(rbtree *t, node_t *child, node_t *parent, node_t *grand) {
-  if (grand == t->root) {
-    t->root = child;
-  } else {
-    if (grand->parent->right == grand) grand->parent->right = child;
-    else grand->parent->left = child;
-  }
-  child->parent = grand->parent;
-
-  if (child->left != t->nil) child->left->parent = grand;
-  if (child->right != t->nil) child->right->parent = parent;
-  parent->left = child->right;
-  grand->right = child->left;
-
-  child->left = grand;
-  grand->parent = child;
-
-  child->right = parent;
-  parent->parent = child;
-
-  child->color = RBTREE_BLACK;
-  grand->color = RBTREE_RED;
-}
-
-void insert_RR(rbtree *t, node_t *child, node_t *parent, node_t *grand) {
-  if (grand == t->root) {
-    t->root = parent;
-  } else {
-    if (grand->parent->right == grand) grand->parent->right = parent;
-    else grand->parent->left = parent;
-  }
-  parent->parent = grand->parent;
-
-  grand->right = parent->left;
-  if (parent->left != t->nil) parent->left->parent = grand;
-
-  grand->parent = parent;
-  parent->left = grand;
-
-  grand->color = RBTREE_RED;
-  parent->color = RBTREE_BLACK;
-}
-
 node_t *rbtree_insert(rbtree *t, const key_t key) {
   node_t *cur;
   node_t *new_node = malloc(sizeof(node_t));
@@ -217,12 +127,14 @@ node_t *rbtree_insert(rbtree *t, const key_t key) {
   new_node->left = new_node->right = t->nil;
 
   cur = t->root;
-  if (cur == t->nil) { // Case: Empty tree
+  // Case: Empty tree
+  if (cur == t->nil) {
     t->root = new_node;
     t->root->color = RBTREE_BLACK;
     return t->root;
   }
 
+  // Sink
   while (1) {
     if (key < cur->key) {
       if (cur->left == t->nil) {
@@ -239,31 +151,49 @@ node_t *rbtree_insert(rbtree *t, const key_t key) {
     }
   }
 
+  // Color Fix
   child = new_node;
   parent = child->parent;
   grand = parent->parent;
   uncle = grand->left == parent ? grand->right : grand->left;
   while (parent->color == RBTREE_RED) {
-    if (uncle->color == RBTREE_RED) { // Color Swap > Propagation
+    // Case: Uncle = Red > Color Swap > Propagation
+    if (uncle->color == RBTREE_RED) {
       parent->color = uncle->color = RBTREE_BLACK;
-      parent->parent->color = RBTREE_RED;
+      grand->color = RBTREE_RED;
 
       child = grand;
       parent = child->parent;
       grand = parent->parent;
       uncle = grand->left == parent ? grand->right : grand->left;
       if (child == t->root) child->color = RBTREE_BLACK;
-    } else if (grand->left == parent && parent->left == child) { // Rotate > Break
-      insert_LL(t, child, parent, grand);
+    }
+    // Case: Uncle = Black > Rotate
+    else if (grand->left == parent && parent->left == child) { // Case: LL
+      rotate_R(t, grand);
+
+      grand->color = RBTREE_RED;
+      parent->color = RBTREE_BLACK;
       break;
-    } else if (grand->left == parent && parent->right == child) {
-      insert_LR(t, child, parent, grand);
+    } else if (grand->left == parent && parent->right == child) { // Case: LR
+      rotate_L(t, parent);
+      rotate_R(t, grand);
+
+      child->color = RBTREE_BLACK;
+      grand->color = RBTREE_RED;
       break;
-    } else if (grand->right == parent && parent->left == child) {
-      insert_RL(t, child, parent, grand);
+    } else if (grand->right == parent && parent->left == child) { // Case: RL
+      rotate_R(t, parent);
+      rotate_L(t, grand);
+
+      child->color = RBTREE_BLACK;
+      grand->color = RBTREE_RED;
       break;
-    } else if (grand->right == parent && parent->right == child) {
-      insert_RR(t, child, parent, grand);
+    } else if (grand->right == parent && parent->right == child) { // Case: RR
+      rotate_L(t, grand);
+
+      grand->color = RBTREE_RED;
+      parent->color = RBTREE_BLACK;
       break;
     } else {
       printf("Edge Error (rbtree_insert)\n");
@@ -286,7 +216,6 @@ node_t *rbtree_find(const rbtree *t, const key_t key) {
   if (cur == t->nil) return NULL;
 
   while (key != cur->key) {
-    // printf("current key = %d\n", cur->key);
     if (key < cur->key) {
       if (cur->left == t->nil) return NULL;
       cur = cur->left;
