@@ -2,12 +2,15 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 // Help functions
 void delete_subtree(node_t *, node_t *);
 void rotate_L(rbtree *, node_t *);
 void rotate_R(rbtree *, node_t *);
 int erase_node(rbtree *, node_t *, node_t *, node_t *);
+void print_tree(const rbtree*);
+void print_tree_structure(const rbtree *, node_t *, char *, int);
 
 // Use Sentinel
 rbtree *new_rbtree(void) {
@@ -411,20 +414,65 @@ int rbtree_erase(rbtree *t, node_t *p) {
   return erase_node(t, child, parent, sibling);
 }
 
-void in_order(const rbtree *t, key_t *arr, node_t *p, int *idx_p, int depth) {
-  // for (int i = 0; i < depth; i++) {
-  //   printf("|  ");
-  // }
-  // printf("+--");
-  // for (int i = 0; i < 3 * (4 - depth); i++) {
-  //   printf(" ");
-  // }
-  // printf("parent: %5d | key: %5d | color: %2c | left: %5d | right: %5d\n", p->parent->key, p->key, p->color == RBTREE_BLACK ? 'B' : 'R', p->left->key, p->right->key);
+void print_tree(const rbtree* t) {
+  print_tree_structure(t, t->root, "", 1);
+  printf("\n");
+}
 
-  if (p->left != t->nil) in_order(t, arr, p->left, idx_p, depth + 1);
+void print_tree_structure(const rbtree *t, node_t *p, char *prefix, int is_last) {
+  /*         넓이 설정         */
+  /* width = 3 -> key = 0~999 */
+  int width = 3;
+
+  if (p == NULL || p == t->nil) return;
+  
+  printf("%s", prefix);
+  
+  if (strlen(prefix) == 0) {
+    printf("key: %*d | color: %c | parent: %*d | left: %*d | right: %*d\n",
+           width, p->key,
+           p->color == RBTREE_BLACK ? 'B' : 'R',
+           width, (p->parent == NULL || p->parent == t->nil) ? 0 : p->parent->key,
+           width, (p->left == NULL || p->left == t->nil) ? 0 : p->left->key,
+           width, (p->right == NULL || p->right == t->nil) ? 0 : p->right->key);
+
+  } else {
+    printf("%skey: %*d | color: %c | parent: %*d | left: %*d | right: %*d\n",
+           is_last ? "╚═ " : "╠═ ",
+           width, p->key,
+           p->color == RBTREE_BLACK ? 'B' : 'R',
+           width, (p->parent == NULL || p->parent == t->nil) ? 0 : p->parent->key,
+           width, (p->left == NULL || p->left == t->nil) ? 0 : p->left->key,
+           width, (p->right == NULL || p->right == t->nil) ? 0 : p->right->key);
+  }
+  
+  int has_left = (p->left != NULL && p->left != t->nil);
+  int has_right = (p->right != NULL && p->right != t->nil);
+  
+  if (has_left || has_right) {
+    char new_prefix[200];
+    
+    if (strlen(prefix) == 0) {
+      sprintf(new_prefix, "%s", is_last ? " " : "║");
+    } else {
+      sprintf(new_prefix, "%s%s", prefix, is_last ? "    " : "║   ");
+    }
+    
+    if (has_left) {
+      print_tree_structure(t, p->left, new_prefix, !has_right);
+    }
+    
+    if (has_right) {
+      print_tree_structure(t, p->right, new_prefix, 1);
+    }
+  }
+}
+
+void in_order(const rbtree *t, key_t *arr, node_t *p, int *idx_p) {
+  if (p->left != t->nil) in_order(t, arr, p->left, idx_p);
   *(arr + (*idx_p)) = p->key;
   (*idx_p)++;
-  if (p->right != t->nil) in_order(t, arr, p->right, idx_p, depth + 1);
+  if (p->right != t->nil) in_order(t, arr, p->right, idx_p);
 }
 
 int rbtree_to_array(const rbtree *t, key_t *arr, const size_t n) {
@@ -440,7 +488,7 @@ int rbtree_to_array(const rbtree *t, key_t *arr, const size_t n) {
     return 1;
   }
 
-  if (t->root != t->nil) in_order(t, arr, t->root, &idx, 0);
+  if (t->root != t->nil) in_order(t, arr, t->root, &idx);
 
   if (idx != n) {
     printf("Index Out of Range (rbtree_to_array)\n");
