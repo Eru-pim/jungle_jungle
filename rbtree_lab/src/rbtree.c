@@ -10,7 +10,7 @@ void rotate_L(rbtree *, node_t *);
 void rotate_R(rbtree *, node_t *);
 int erase_node(rbtree *, node_t *, node_t *, node_t *);
 void print_tree(const rbtree*);
-void print_tree_structure(const rbtree *, node_t *, char *, int);
+void print_tree_structure(const rbtree *, node_t *, char *, int, int);
 
 // Use Sentinel
 rbtree *new_rbtree(void) {
@@ -415,11 +415,11 @@ int rbtree_erase(rbtree *t, node_t *p) {
 }
 
 void print_tree(const rbtree* t) {
-  print_tree_structure(t, t->root, "", 1);
+  print_tree_structure(t, t->root, "", 1, 0);
   printf("\n");
 }
 
-void print_tree_structure(const rbtree *t, node_t *p, char *prefix, int is_last) {
+void print_tree_structure(const rbtree *t, node_t *p, char *prefix, int is_last, int black_depth) {
   /*         넓이 설정         */
   /* width = 3 -> key = 0~999 */
   int width = 3;
@@ -428,26 +428,45 @@ void print_tree_structure(const rbtree *t, node_t *p, char *prefix, int is_last)
   
   printf("%s", prefix);
   
-  if (strlen(prefix) == 0) {
-    printf("key: %*d | color: %c | parent: %*d | left: %*d | right: %*d\n",
-           width, p->key,
-           p->color == RBTREE_BLACK ? 'B' : 'R',
-           width, (p->parent == NULL || p->parent == t->nil) ? 0 : p->parent->key,
-           width, (p->left == NULL || p->left == t->nil) ? 0 : p->left->key,
-           width, (p->right == NULL || p->right == t->nil) ? 0 : p->right->key);
+  char color_char = p->color == RBTREE_BLACK ? 'B' : 'R';
+  const char* color_start = (p->color == RBTREE_BLACK) ? "" : "\x1b[31m";
+  const char* color_end = (p->color == RBTREE_BLACK) ? "" : "\x1b[0m";
 
-  } else {
-    printf("%skey: %*d | color: %c | parent: %*d | left: %*d | right: %*d\n",
-           is_last ? "╚═ " : "╠═ ",
-           width, p->key,
-           p->color == RBTREE_BLACK ? 'B' : 'R',
-           width, (p->parent == NULL || p->parent == t->nil) ? 0 : p->parent->key,
-           width, (p->left == NULL || p->left == t->nil) ? 0 : p->left->key,
-           width, (p->right == NULL || p->right == t->nil) ? 0 : p->right->key);
-  }
-  
   int has_left = (p->left != NULL && p->left != t->nil);
   int has_right = (p->right != NULL && p->right != t->nil);
+  int is_leaf_path = (!has_left || !has_right);
+  black_depth += p->color;
+
+  if (strlen(prefix) == 0) {
+    printf("key: %s%*d | color: %c | parent: %*d | left: %*d | right: %*d%s",
+           color_start,
+           width, p->key,
+           color_char,
+           width, (p->parent == NULL || p->parent == t->nil) ? 0 : p->parent->key,
+           width, (p->left == NULL || p->left == t->nil) ? 0 : p->left->key,
+           width, (p->right == NULL || p->right == t->nil) ? 0 : p->right->key,
+           color_end);
+    
+    if (is_leaf_path) {
+      printf(" | black depth: %3d", black_depth);
+    }
+    printf("\n");
+
+  } else {
+    printf("%s%skey: %*d | color: %c | parent: %*d | left: %*d | right: %*d",
+           color_start,
+           is_last ? "╚═ " : "╠═ ",
+           width, p->key,
+           color_char,
+           width, (p->parent == NULL || p->parent == t->nil) ? 0 : p->parent->key,
+           width, (p->left == NULL || p->left == t->nil) ? 0 : p->left->key,
+           width, (p->right == NULL || p->right == t->nil) ? 0 : p->right->key);
+    
+    if (is_leaf_path) {
+      printf(" | black depth: %3d", black_depth);
+    }
+    printf("%s\n", color_end);
+  }
   
   if (has_left || has_right) {
     char new_prefix[200];
@@ -459,11 +478,11 @@ void print_tree_structure(const rbtree *t, node_t *p, char *prefix, int is_last)
     }
     
     if (has_left) {
-      print_tree_structure(t, p->left, new_prefix, !has_right);
+      print_tree_structure(t, p->left, new_prefix, !has_right, black_depth);
     }
     
     if (has_right) {
-      print_tree_structure(t, p->right, new_prefix, 1);
+      print_tree_structure(t, p->right, new_prefix, 1, black_depth);
     }
   }
 }

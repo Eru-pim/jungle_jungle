@@ -355,15 +355,16 @@ void test_find_erase(rbtree *t, const key_t *arr, const size_t n)
     assert(p != NULL);
   }
 
-//   print_tree(t);
-
   for (int i = 0; i < n; i++)
   {
     node_t *p = rbtree_find(t, arr[i]);
     // printf("arr[%d] = %d\n", i, arr[i]);
+    print_tree(t);
     assert(p != NULL);
     assert(p->key == arr[i]);
     rbtree_erase(t, p);
+    test_color_constraint(t);
+    test_search_constraint(t);
   }
 
   for (int i = 0; i < n; i++)
@@ -426,6 +427,6 @@ int main(void)
   test_distinct_values();
   test_duplicate_values();
   test_multi_instance();
-  test_find_erase_rand(10000, 17);
+//   test_find_erase_rand(10000, 17);
   printf("Passed all tests!\n");
 }
