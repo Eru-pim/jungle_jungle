@@ -43,7 +43,7 @@
         },
 
         {
-            "name": "Debug mdriver (malloc-lab)",
+            "name": "Debug (malloc-lab)",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/malloc-lab/mdriver",
@@ -64,7 +64,7 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "Build mdriver (malloc-lab)"
+            "preLaunchTask": "Build (malloc-lab)"
         }
     ],
     "version": "0.2.0"

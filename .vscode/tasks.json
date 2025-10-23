@@ -99,7 +99,7 @@
             }
         },
         {
-            "label": "Build mdriver (malloc-lab)",
+            "label": "Build (malloc-lab)",
             "type": "shell",
             "command": "make",
             "args": [],
