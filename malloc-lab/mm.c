@@ -83,10 +83,10 @@ static void *find_fit(size_t);
 static void *coalesce(void *);
 
 /*****************************
- * Type:  Next fit           *
- * Score: util  -  44 /  60  *   
- *        thru  -  40 /  40  *
- *        total -  84 / 100  *
+ * Type:  Best fit           *
+ * Score: util  -  45 /  60  *   
+ *        thru  -  10 /  40  *
+ *        total -  55 / 100  *
  *****************************/
 
 /* Current Work
