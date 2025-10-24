@@ -83,17 +83,10 @@ static void *find_fit(size_t);
 static void *coalesce(void *);
 
 /*****************************
-<<<<<<< HEAD
  * Type:  Implicit Free List *
  * Score: util  -  45 /  60  *   
  *        thru  -  15 /  40  *
  *        total -  60 / 100  *
-=======
- * Type:  Next fit           *
- * Score: util  -   - /  60  *   
- *        thru  -   - /  40  *
- *        total -   - / 100  *
->>>>>>> malloc-lab/next_fit
  *****************************/
 
 /* Current Work
@@ -113,6 +106,7 @@ int mm_init(void) {
     PUT(heap_listp, 0);
     PUT(heap_listp + (1 * WSIZE), PACK(DSIZE, 1)); // 1st prologue
     PUT(heap_listp + (2 * WSIZE), PACK(DSIZE, 1)); // 2nd prologue
+    PUT(heap_listp + (3 * WSIZE), PACK(0, 1));     //     epilogue
     PUT(heap_listp + (3 * WSIZE), PACK(0, 1));     //     epilogue
     heap_listp += 2 * WSIZE;
     
