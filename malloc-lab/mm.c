@@ -75,7 +75,6 @@ team_t team = {
 
 /* Global Variables */
 static char *heap_listp = 0;  /* Pointer to first block */
-static char *rover;
 
 /* Helper Functions - Declaration */
 static void *extend_heap(size_t);
@@ -110,8 +109,6 @@ int mm_init(void) {
     PUT(heap_listp + (3 * WSIZE), PACK(0, 1));     //     epilogue
     PUT(heap_listp + (3 * WSIZE), PACK(0, 1));     //     epilogue
     heap_listp += 2 * WSIZE;
-    
-    rover = heap_listp;
 
     if (extend_heap(CHUNKSIZE / WSIZE) == NULL)
         return -1;
@@ -228,17 +225,31 @@ static void place(void *bp, size_t a_size) {
 }
 
 static void *find_fit(size_t a_size) {
-    char *old_rover = rover;
+    char *bp;
+    char *best_place = NULL;
+    size_t best_gap = 0;
+    size_t curr_gap;
 
-    for (; GET_SIZE(HDRP(rover)) > 0; rover = NEXT_BLKP(rover))
-        if (!GET_ALLOC(HDRP(rover)) && (a_size <= GET_SIZE(HDRP(rover))))
-            return rover;
+    for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)) {
+        if (!GET_ALLOC(HDRP(bp)) && (a_size <= GET_SIZE(HDRP(bp)))) {
+            curr_gap = GET_SIZE(HDRP(bp)) - a_size;
+            
+            if (!curr_gap)
+                return bp;
 
-    for (rover = heap_listp; rover < old_rover; rover = NEXT_BLKP(rover))
-        if (!GET_ALLOC(HDRP(rover)) && (a_size <= GET_SIZE(HDRP(rover))))
-            return rover;
+            if (!best_place) {
+                best_place = bp;
+                best_gap = curr_gap;
+            } else {
+                if (curr_gap < best_gap) {
+                    best_place = bp;
+                    best_gap = curr_gap;
+                }
+            }
+        }
+    }
     
-    return NULL;
+    return best_place;
 }
 
 static void *coalesce(void *bp) {
@@ -264,10 +275,6 @@ static void *coalesce(void *bp) {
         PUT(FTRP(NEXT_BLKP(bp)), PACK(size, 0));
         bp = PREV_BLKP(bp);
     }
-
-    // rover back
-    if ((rover > (char *)bp) && (rover < NEXT_BLKP(bp)))
-        rover = bp;
 
     return bp;
 }
