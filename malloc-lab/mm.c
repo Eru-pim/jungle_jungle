@@ -83,10 +83,17 @@ static void *find_fit(size_t);
 static void *coalesce(void *);
 
 /*****************************
+<<<<<<< HEAD
  * Type:  Implicit Free List *
  * Score: util  -  45 /  60  *   
  *        thru  -  15 /  40  *
  *        total -  60 / 100  *
+=======
+ * Type:  Next fit           *
+ * Score: util  -   - /  60  *   
+ *        thru  -   - /  40  *
+ *        total -   - / 100  *
+>>>>>>> malloc-lab/next_fit
  *****************************/
 
 /* Current Work
