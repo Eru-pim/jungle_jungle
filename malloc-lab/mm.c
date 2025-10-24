@@ -84,7 +84,9 @@ static void *coalesce(void *);
 
 /*****************************
  * Type:  Implicit Free List *
- * Score: 59 / 100           *
+ * Score: util  -  45 /  60  *   
+ *        thru  -  15 /  40  *
+ *        total -  60 / 100  *
  *****************************/
 
 /* Current Work
@@ -104,7 +106,7 @@ int mm_init(void) {
     PUT(heap_listp, 0);
     PUT(heap_listp + (1 * WSIZE), PACK(DSIZE, 1)); // 1st prologue
     PUT(heap_listp + (2 * WSIZE), PACK(DSIZE, 1)); // 2nd prologue
-    PUT(heap_listp + (3 * WSIZE), PACK(0, 1)); //     epilogue
+    PUT(heap_listp + (3 * WSIZE), PACK(0, 1));     //     epilogue
     heap_listp += 2 * WSIZE;
     
     if (extend_heap(CHUNKSIZE / WSIZE) == NULL)
