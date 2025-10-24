@@ -207,6 +207,11 @@ void *mm_realloc(void *ptr, size_t size) {
         inplace_size += GET_SIZE(HDRP(NEXT_BLKP(ptr)));
 
     if (new_size <= inplace_size) {
+        if (inplace_size > old_size) {
+            PUT(HDRP(ptr), PACK(inplace_size, 1));
+            PUT(FTRP(ptr), PACK(inplace_size, 1));
+        }
+
         if ((inplace_size - new_size) >= (2 * DSIZE)) {
             PUT(HDRP(ptr), PACK(new_size, 1));
             PUT(FTRP(ptr), PACK(new_size, 1));
