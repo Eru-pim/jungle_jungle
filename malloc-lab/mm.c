@@ -83,12 +83,26 @@ static void place(void *, size_t);
 static void *find_fit(size_t);
 static void *coalesce(void *);
 
-/*****************************
- * Type:  Next fit           *
- * Score: util  -  44 /  60  *   
- *        thru  -  40 /  40  *
- *        total -  84 / 100  *
- *****************************/
+/***********************************************
+ * Type:  Next fit +                           *
+ *        Inplace Realloc                      *
+ * Score:                                      *
+ * trace  valid  util     ops      secs  Kops  *
+ *  0       yes   91%    5694  0.002253  2527  *
+ *  1       yes   92%    5848  0.001524  3836  *
+ *  2       yes   95%    6648  0.003871  1717  *
+ *  3       yes   97%    5380  0.003822  1408  *
+ *  4       yes   66%   14400  0.000391 36866  *
+ *  5       yes   91%    4800  0.004349  1104  *
+ *  6       yes   89%    4800  0.003728  1288  *
+ *  7       yes   55%   12000  0.016367   733  *
+ *  8       yes   51%   24000  0.008880  2703  *
+ *  9       yes   27%   14401  0.052687   273  *
+ * 10       yes   53%   14401  0.000456 31588  *
+ * Total          73%  112372  0.098328  1143  *
+ *                                             *
+ * Perf index = 44 (util) + 40 (thru) = 84/100 *
+ ***********************************************/
 
 /* Current Work
  * 
@@ -171,9 +185,6 @@ void mm_free(void *bp) {
  * mm_realloc - Implemented simply in terms of mm_malloc and mm_free
  */
 void *mm_realloc(void *ptr, size_t size) {
-    void *newptr;
-    size_t old_size;
-
     if (size == 0) {
         mm_free(ptr);
         return NULL;
@@ -183,11 +194,36 @@ void *mm_realloc(void *ptr, size_t size) {
         return mm_malloc(size);
     }
 
-    newptr = mm_malloc(size);
+    size_t old_size = GET_SIZE(HDRP(ptr));
+    size_t new_size, inplace_size;
+
+    if (size <= DSIZE)
+        new_size = 2 * DSIZE;
+    else
+        new_size = DSIZE * ((size + (DSIZE) + (DSIZE - 1)) / DSIZE);
+
+    inplace_size = old_size;
+    if (GET_SIZE(HDRP(NEXT_BLKP(ptr))) > 0 && !GET_ALLOC(HDRP(NEXT_BLKP(ptr))))
+        inplace_size += GET_SIZE(HDRP(NEXT_BLKP(ptr)));
+
+    if (new_size <= inplace_size) {
+        if ((inplace_size - new_size) >= (2 * DSIZE)) {
+            PUT(HDRP(ptr), PACK(new_size, 1));
+            PUT(FTRP(ptr), PACK(new_size, 1));
+
+            void *next_ptr = NEXT_BLKP(ptr);
+            PUT(HDRP(next_ptr), PACK(inplace_size - new_size, 0));
+            PUT(FTRP(next_ptr), PACK(inplace_size - new_size, 0));
+
+            coalesce(next_ptr);
+        }
+        return ptr;
+    }
+
+    void *newptr = mm_malloc(size);
     if (newptr == NULL)
         return NULL;
     
-    old_size = GET_SIZE(HDRP(ptr));
     if (size < old_size) old_size = size;
     memcpy(newptr, ptr, old_size);
     
