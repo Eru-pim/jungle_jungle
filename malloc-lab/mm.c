@@ -110,21 +110,21 @@ static void remove_free_block(void *);
  * Type:  Segrated Storage                     *
  *                                             *
  * Score:                                      *
- * trace  valid  util     ops      secs  Kops  *
- *  0       yes   91%    5694  0.002253  2527  *
- *  1       yes   92%    5848  0.001524  3836  *
- *  2       yes   95%    6648  0.003871  1717  *
- *  3       yes   97%    5380  0.003822  1408  *
- *  4       yes   66%   14400  0.000391 36866  *
- *  5       yes   91%    4800  0.004349  1104  *
- *  6       yes   89%    4800  0.003728  1288  *
- *  7       yes   55%   12000  0.016367   733  *
- *  8       yes   51%   24000  0.008880  2703  *
- *  9       yes   27%   14401  0.052687   273  *
- * 10       yes   53%   14401  0.000456 31588  *
- * Total          73%  112372  0.098328  1143  *
- *                                             *
- * Perf index = 44 (util) + 40 (thru) = 84/100 *
+ * trace  valid  util     ops      secs  Kops
+ *  0      yes   98%    5694  0.000337 16901
+ *  1      yes   95%    5848  0.000372 15733
+ *  2      yes   96%    6648  0.000510 13025
+ *  3      yes   99%    5380  0.000357 15083
+ *  4      yes   66%   14400  0.000867 16613
+ *  5      yes   92%    4800  0.000367 13079
+ *  6      yes   88%    4800  0.000391 12289
+ *  7      yes   55%   12000  0.000623 19277
+ *  8      yes   51%   24000  0.001368 17540
+ *  9      yes   27%   14401  0.022377   644
+ * 10      yes   51%   14401  0.000663 21708
+ * Total         74%  112372  0.028232  3980
+
+Perf index = 45 (util) + 40 (thru) = 85/100
  ***********************************************/
 
 /*
@@ -144,7 +144,7 @@ int mm_init(void) {
 
     heap_endp = heap_startp + 18 * WSIZE;
 
-    if (extend_heap(CHUNKSIZE / WSIZE) == NULL)
+    if (extend_heap((1 << 8) / WSIZE) == NULL)
         return -1;
     return 0;
 }
@@ -301,7 +301,7 @@ static void place(void *bp, size_t a_size) {
 
     remove_free_block(bp);
 
-    if (remain >= (2 * DSIZE)) {
+    if (remain >= (4 * DSIZE)) {
         PUT(HDRP(bp), PACK(a_size, 1));
         PUT(FTRP(bp), PACK(a_size, 1));
         bp = NEXT_BLKP(bp);
@@ -316,17 +316,30 @@ static void place(void *bp, size_t a_size) {
 
 static void *find_fit(size_t a_size) {
     int class_idx = get_class_index(a_size);
-    void *bp;
 
-    for (int i = class_idx; i < CLASSCOUNT; i++) {
-        bp = GET_CLASS_HEAD(i);
-
-        while (bp != NULL) {
-            if (GET_SIZE(HDRP(bp)) >= a_size) return bp;
-            bp = GET_NEXT_PTR(bp);
-        }
+    void *bp = GET_CLASS_HEAD(class_idx);
+    while (bp != NULL) {
+        if (GET_SIZE(HDRP(bp)) >= a_size) return bp;
+        bp = GET_NEXT_PTR(bp);
     }
 
+    void *best_fit = NULL;
+    size_t best_size = 1 << 20;
+    
+    for (int i = class_idx + 1; i < CLASSCOUNT; i++) {
+        bp = GET_CLASS_HEAD(i);
+        while (bp != NULL) {
+            size_t block_size = GET_SIZE(HDRP(bp));
+            if (block_size >= a_size && block_size < best_size) {
+                best_fit = bp;
+                best_size = block_size;
+                if (block_size == a_size) return best_fit;
+            }
+            bp = GET_NEXT_PTR(bp);
+        }
+        if (best_fit) return best_fit;
+    }
+    
     return NULL;
 }
 
@@ -368,16 +381,16 @@ static int get_class_index(size_t size) {
     if (size <=    64) return  1;
     if (size <=    96) return  2;
     if (size <=   128) return  3;
-    if (size <=   160) return  4;
-    if (size <=   192) return  5;
-    if (size <=   224) return  6;
-    if (size <=   256) return  7;
-    if (size <=   512) return  8;
-    if (size <=  1024) return  9;
-    if (size <=  2048) return 10;
-    if (size <=  4096) return 11;
-    if (size <=  8192) return 12;
-    if (size <= 16384) return 13;
+    if (size <=   256) return  4;
+    if (size <=   384) return  5;
+    if (size <=   512) return  6;
+    if (size <=  1024) return  7;
+    if (size <=  2048) return  8;
+    if (size <=  4096) return  9;
+    if (size <=  8192) return 10;
+    if (size <= 16384) return 11;
+    if (size <= 32768) return 12;
+    if (size <= 65536) return 13;
     return 14;
 }
 
