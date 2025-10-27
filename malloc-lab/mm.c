@@ -48,7 +48,7 @@ static char *heap_endp = 0;    /* Pointer to heap end   */
 
 /* Helper Functions - Declaration */
 static void *extend_heap(size_t);
-static void place(void *, size_t);
+static void *place(void *, size_t);
 static void *find_fit(size_t);
 static void *coalesce(void *);
 
@@ -171,14 +171,14 @@ void *mm_malloc(size_t size) {
         a_size = DSIZE * ((size + (DSIZE) + (DSIZE - 1)) / DSIZE);
     
     if ((bp = find_fit(a_size)) != NULL) {
-        place(bp, a_size);
+        bp = place(bp, a_size);
         return bp;
     }
 
     extend_size = MAX(a_size, CHUNKSIZE);
     if ((bp = extend_heap(extend_size / WSIZE)) == NULL)
         return NULL;
-    place(bp, a_size);
+    bp = place(bp, a_size);
     return bp;
 }
 
@@ -295,22 +295,36 @@ static void *extend_heap(size_t words) {
     return coalesce(bp);
 }
 
-static void place(void *bp, size_t a_size) {
+static void *place(void *bp, size_t a_size) {
     size_t c_size = GET_SIZE(HDRP(bp));
     size_t remain = c_size - a_size;
 
     remove_free_block(bp);
 
-    if (remain >= (4 * DSIZE)) {
-        PUT(HDRP(bp), PACK(a_size, 1));
-        PUT(FTRP(bp), PACK(a_size, 1));
-        bp = NEXT_BLKP(bp);
+    if (remain > (1 << 10)) {
         PUT(HDRP(bp), PACK(remain, 0));
         PUT(FTRP(bp), PACK(remain, 0));
+        
+        void *malloc_bp = NEXT_BLKP(bp);
+        PUT(HDRP(malloc_bp), PACK(a_size, 1));
+        PUT(FTRP(malloc_bp), PACK(a_size, 1));
+        
         add_free_block(bp);
+        return malloc_bp;
+    } else if (remain >= (4 * DSIZE)) {
+        PUT(HDRP(bp), PACK(a_size, 1));
+        PUT(FTRP(bp), PACK(a_size, 1));
+        
+        void *free_bp = NEXT_BLKP(bp);
+        PUT(HDRP(free_bp), PACK(remain, 0));
+        PUT(FTRP(free_bp), PACK(remain, 0));
+        
+        add_free_block(free_bp);
+        return bp;
     } else {
         PUT(HDRP(bp), PACK(c_size, 1));
         PUT(FTRP(bp), PACK(c_size, 1));
+        return bp;
     }
 }
 
@@ -400,13 +414,35 @@ static void add_free_block(void *bp) {
 
     void *head = GET_CLASS_HEAD(class_idx);
 
-    SET_PREV_PTR(bp, NULL);
-    SET_NEXT_PTR(bp, head);
-
-    if (head != NULL) {
-        SET_PREV_PTR(head, bp);
+    if (head == NULL || bp < head) {
+        SET_PREV_PTR(bp, NULL);
+        SET_NEXT_PTR(bp, head);
+        
+        if (head != NULL) {
+            SET_PREV_PTR(head, bp);
+        }
+        SET_CLASS_HEAD_OFFSET(class_idx, bp);
+        return;
     }
-    SET_CLASS_HEAD_OFFSET(class_idx, bp);
+
+    void *curr = head;
+    void *prev = NULL;
+    
+    while (curr != NULL && curr < bp) {
+        prev = curr;
+        curr = GET_NEXT_PTR(curr);
+    }
+
+    SET_PREV_PTR(bp, prev);
+    SET_NEXT_PTR(bp, curr);
+    
+    if (prev != NULL) {
+        SET_NEXT_PTR(prev, bp);
+    }
+    
+    if (curr != NULL) {
+        SET_PREV_PTR(curr, bp);
+    }
 }
 
 static void remove_free_block(void *bp) {
