@@ -134,7 +134,7 @@ int mm_init(void) {
     if ((heap_startp = mem_sbrk(18 * WSIZE)) == (void *)-1)
         return -1;
     
-    for (int i = 0; i < 15; i++) {
+    for (int i = 0; i < CLASSCOUNT; i++) {
         SET_CLASS_HEAD_OFFSET(i, NULL);
     }
 
@@ -336,6 +336,7 @@ static void *coalesce(void *bp) {
     size_t size = GET_SIZE(HDRP(bp));
 
     if (prev_alloc && next_alloc) {         // Case: A - Block - A
+        add_free_block(bp);
         return bp;
     } else if (prev_alloc && !next_alloc) { // Case: A - Block - F
         remove_free_block(NEXT_BLKP(bp));
@@ -380,7 +381,7 @@ static int get_class_index(size_t size) {
     return 14;
 }
 
-static void add_free_block(void * bp) {
+static void add_free_block(void *bp) {
     size_t size = GET_SIZE(HDRP(bp));
     int class_idx = get_class_index(size);
 
