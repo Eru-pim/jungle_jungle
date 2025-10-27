@@ -26,6 +26,6 @@ handin:
 	cp mm.c $(HANDINDIR)/$(TEAM)-$(VERSION)-mm.c
 
 clean:
-	rm -f *~ *.o mdriver result.txt
+	rm -f *~ *.o mdriver result.txt gmon.out
 
 
