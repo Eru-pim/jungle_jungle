@@ -44,7 +44,6 @@ team_t team = {
 
 /* Global Variables */
 static char *heap_startp = 0;  /* Pointer to heap start */
-static char *heap_endp = 0;    /* Pointer to heap end   */
 
 /* Helper Functions - Declaration */
 static void *extend_heap(size_t);
@@ -110,21 +109,21 @@ static void remove_free_block(void *);
  * Type:  Segrated Storage                     *
  *                                             *
  * Score:                                      *
- * trace  valid  util     ops      secs  Kops
- *  0      yes   98%    5694  0.000337 16901
- *  1      yes   95%    5848  0.000372 15733
- *  2      yes   96%    6648  0.000510 13025
- *  3      yes   99%    5380  0.000357 15083
- *  4      yes   66%   14400  0.000867 16613
- *  5      yes   92%    4800  0.000367 13079
- *  6      yes   88%    4800  0.000391 12289
- *  7      yes   55%   12000  0.000623 19277
- *  8      yes   51%   24000  0.001368 17540
- *  9      yes   27%   14401  0.022377   644
- * 10      yes   51%   14401  0.000663 21708
- * Total         74%  112372  0.028232  3980
-
-Perf index = 45 (util) + 40 (thru) = 85/100
+ * trace  valid  util     ops      secs  Kops  *
+ *  0       yes   99%    5694  0.000433 13162  *
+ *  1       yes  100%    5848  0.000391 14976  *
+ *  2       yes   99%    6648  0.000462 14390  *
+ *  3       yes  100%    5380  0.000377 14267  *
+ *  4       yes   98%   14400  0.000956 15071  *
+ *  5       yes   95%    4800  0.000745  6446  *
+ *  6       yes   94%    4800  0.000718  6686  *
+ *  7       yes   97%   12000  0.011810  1016  *
+ *  8       yes   90%   24000  0.053428   449  *
+ *  9       yes  100%   14401  0.000631 22830  *
+ * 10       yes  100%   14401  0.000562 25643  *
+ * Total          97%  112372  0.070511  1594  *
+ *                                             *
+ * Perf index = 58 (util) + 40 (thru) = 98/100 *
  ***********************************************/
 
 /*
@@ -142,9 +141,7 @@ int mm_init(void) {
     PUT(heap_startp + (CLASSCOUNT + 1) * WSIZE, PACK(DSIZE, 1)); // prologue footer
     PUT(heap_startp + (CLASSCOUNT + 2) * WSIZE, PACK(0, 1));     // epilogue
 
-    heap_endp = heap_startp + (CLASSCOUNT + 3) * WSIZE;
-
-    if (extend_heap(((1 << 8)) / WSIZE) == NULL)
+    if (extend_heap(((1 << 6)) / WSIZE) == NULL)
         return -1;
     return 0;
 }
@@ -179,8 +176,8 @@ void *mm_malloc(size_t size) {
     }
 
     extend_size = MAX(a_size, CHUNKSIZE);
-    if (a_size == 24)  extend_size = 160;
-    if (a_size == 136) extend_size = 160;
+    // if (a_size == 24)  extend_size = 160;
+    // if (a_size == 136) extend_size = 160;
     if (a_size == 456) extend_size = 520;
     if ((bp = extend_heap(extend_size / WSIZE)) == NULL)
         return NULL;
@@ -248,8 +245,6 @@ void *mm_realloc(void *ptr, size_t size) {
         extend_size = ALIGN(extend_size);
         
         if (mem_sbrk(extend_size) != (void *)-1) {
-            heap_endp += extend_size;
-            
             PUT(HDRP(ptr), PACK(new_size, 1));
             PUT(FTRP(ptr), PACK(new_size, 1));
             
@@ -262,8 +257,7 @@ void *mm_realloc(void *ptr, size_t size) {
     next_bp = NEXT_BLKP(ptr);
     size_t combined_size = old_size;
 
-    if ((char*)next_bp < (char*)heap_endp && 
-        !GET_ALLOC(HDRP(next_bp))) {
+    if (!GET_ALLOC(HDRP(next_bp))) {
         combined_size += GET_SIZE(HDRP(next_bp));
     }
 
@@ -314,8 +308,6 @@ static void *extend_heap(size_t words) {
     PUT(FTRP(bp), PACK(size, 0));
 
     PUT(HDRP(NEXT_BLKP(bp)), PACK(0, 1));
-
-    heap_endp += size;
 
     return coalesce(bp);
 }
