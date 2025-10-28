@@ -1,14 +1,3 @@
-/*
- * mm-naive.c - The fastest, least memory-efficient malloc package.
- *
- * In this naive approach, a block is allocated by simply incrementing
- * the brk pointer.  A block is pure payload. There are no headers or
- * footers.  Blocks are never coalesced or reused. Realloc is
- * implemented directly using mm_malloc and mm_free.
- *
- * NOTE TO STUDENTS: Replace this header comment with your own header
- * comment that gives a high level description of your solution.
- */
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -18,10 +7,6 @@
 #include "mm.h"
 #include "memlib.h"
 
-/*********************************************************
- * NOTE TO STUDENTS: Before you do anything else, please
- * provide your team information in the following struct.
- ********************************************************/
 team_t team = {
     /* Team name */
     "Eru-pim",
@@ -44,6 +29,15 @@ team_t team = {
 
 /* Global Variables */
 static char *heap_startp = 0;  /* Pointer to heap start */
+
+/* Segrated Storage */
+#define USE_ARRAY // Shortcut for 99 / 100
+
+#define CLASSCOUNT  17
+
+#ifdef USE_ARRAY
+static unsigned int class_heads[CLASSCOUNT];
+#endif
 
 /* Helper Functions - Declaration */
 static void *extend_heap(size_t);
@@ -85,16 +79,19 @@ static void remove_free_block(void *);
 #define PREV_BLKP(bp)  ((char *)(bp) - GET_SIZE((char *)(bp) - DSIZE))
 #define NEXT_BLKP(bp)  ((char *)(bp) + GET_SIZE((char *)(bp) - WSIZE))
 
-/* Segrated Storage */
-#define CLASSCOUNT  17
-
 /* Convert between real address and relative offset */
 #define PTR_TO_OFFSET(ptr)     ((ptr) ? (unsigned int)((char *)(ptr) - heap_startp) : 0)
 #define OFFSET_TO_PTR(offset)  ((offset) ? (void *)(heap_startp + (offset)) : NULL)
 
 /* Given class index and pointer, return or set class header */
+#ifdef USE_ARRAY
+#define GET_CLASS_HEAD_OFFSET(idx)      (class_heads[idx])
+#define SET_CLASS_HEAD_OFFSET(idx, ptr) (class_heads[idx] = PTR_TO_OFFSET(ptr))
+#else
 #define GET_CLASS_HEAD_OFFSET(idx)      (GET(heap_startp + idx * WSIZE))
 #define SET_CLASS_HEAD_OFFSET(idx, ptr) (PUT(heap_startp + idx * WSIZE, PTR_TO_OFFSET(ptr)))
+#endif
+
 #define GET_CLASS_HEAD(idx)             (OFFSET_TO_PTR(GET_CLASS_HEAD_OFFSET(idx)))
 
 /* Free block pointer operations with relative offsets */
@@ -105,8 +102,30 @@ static void remove_free_block(void *);
 
 /* $end mallocmacros */
 
+#ifdef USE_ARRAY
 /***********************************************
  * Type:  Segrated Storage                     *
+ *                                             *
+ * Score:                                      *
+ * trace  valid  util     ops      secs  Kops  *
+ *  0       yes   99%    5694  0.001919  2968  *
+ *  1       yes  100%    5848  0.001426  4101  *
+ *  2       yes   99%    6648  0.001297  5127  *
+ *  3       yes  100%    5380  0.000895  6013  *
+ *  4       yes   99%   14400  0.003204  4495  *
+ *  5       yes   95%    4800  0.002084  2303  *
+ *  6       yes   94%    4800  0.002398  2002  *
+ *  7       yes   97%   12000  0.042324   284  *
+ *  8       yes   90%   24000  0.092928   258  *
+ *  9       yes  100%   14401  0.001193 12074  *
+ * 10       yes  100%   14401  0.001143 12597  *
+ * Total          98%  112372  0.150811   745  *
+ *                                             *
+ * Perf index = 59 (util) + 40 (thru) = 99/100 *
+ ***********************************************/
+#else
+/***********************************************
+ * Type:  Segrated Storage (1 global variable) *
  *                                             *
  * Score:                                      *
  * trace  valid  util     ops      secs  Kops  *
@@ -125,11 +144,28 @@ static void remove_free_block(void *);
  *                                             *
  * Perf index = 58 (util) + 40 (thru) = 98/100 *
  ***********************************************/
+#endif
 
 /*
  * mm_init - initialize the malloc package.
  */
-int mm_init(void) {   
+int mm_init(void) {
+#ifdef USE_ARRAY
+    for (int i = 0; i < CLASSCOUNT; i++) {
+        class_heads[i] = 0;
+    }
+    
+    if ((heap_startp = mem_sbrk(4 * WSIZE)) == (void *)-1)
+        return -1;
+
+    PUT(heap_startp + 1 * WSIZE, PACK(DSIZE, 1)); // prologue header
+    PUT(heap_startp + 2 * WSIZE, PACK(DSIZE, 1)); // prologue footer
+    PUT(heap_startp + 3 * WSIZE, PACK(0, 1));     // epilogue
+
+    if (extend_heap(((1 << 6)) / WSIZE) == NULL)
+        return -1;
+    return 0;
+#else
     if ((heap_startp = mem_sbrk((CLASSCOUNT + 3) * WSIZE)) == (void *)-1)
         return -1;
     
@@ -144,6 +180,7 @@ int mm_init(void) {
     if (extend_heap(((1 << 6)) / WSIZE) == NULL)
         return -1;
     return 0;
+#endif
 }
 
 /*
