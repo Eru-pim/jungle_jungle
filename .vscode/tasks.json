@@ -88,7 +88,7 @@
             }
         },
         {
-            "label": "Clean (malloc-lab)",
+            "label": "MallocLab - clean",
             "type": "shell",
             "command": "make clean",
             "args": [],
@@ -99,7 +99,7 @@
             }
         },
         {
-            "label": "Build (malloc-lab)",
+            "label": "MallocLab - build",
             "type": "shell",
             "command": "make",
             "args": [],
@@ -115,7 +115,7 @@
             }
         },
         {
-            "label": "gprof (malloc-lab)",
+            "label": "MallocLab - gprof",
             "type": "shell",
             "command": "bash",
             "args": [
@@ -131,6 +131,104 @@
             },
             "options": {
                 "cwd": "${workspaceFolder}/malloc-lab"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Tiny - build",
+            "type": "shell",
+            "command": "cd ${workspaceFolder}/webproxy-lab/tiny && make",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/webproxy-lab/tiny"
+            }
+        },
+        {
+            "label": "Tiny - clean",
+            "type": "shell",
+            "command": "cd ${workspaceFolder}/webproxy-lab/tiny && make clean",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": [],
+            "options": {
+                "cwd": "${workspaceFolder}/webproxy-lab/tiny"
+            }
+        },
+        {
+            "label": "Tiny - C&B",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Tiny - clean",
+                "Tiny - build"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Proxy - build",
+            "type": "shell",
+            "command": "cd ${workspaceFolder}/webproxy-lab && make",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/webproxy-lab"
+            }
+        },
+        {
+            "label": "Proxy - clean",
+            "type": "shell",
+            "command": "cd ${workspaceFolder}/webproxy-lab && make clean",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": [],
+            "options": {
+                "cwd": "${workspaceFolder}/webproxy-lab"
+            }
+        },
+        {
+            "label": "Proxy - C&B",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Proxy - clean",
+                "Proxy - build"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
             },
             "problemMatcher": []
         }
