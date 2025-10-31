@@ -1,0 +1,13 @@
+{
+    "git.ignoreLimitWarning": true,
+    "files.associations": {
+        "*.html": "html",
+        "stdlib.h": "c",
+        "bit": "c",
+        "concepts": "c",
+        "cstdio": "c",
+        "type_traits": "c",
+        "new": "c",
+        "typeinfo": "c"
+    }
+}
