@@ -8,11 +8,14 @@ int main(void)
 {
   char *buf, *p;
   char arg1[MAXLINE], arg2[MAXLINE], content[MAXLINE];
+  char query_copy[MAXLINE];
   int n1 = 0, n2 = 0;
 
   /* Extract the two arguments */
   if ((buf = getenv("QUERY_STRING")) != NULL)
   {
+    strcpy(query_copy, buf);
+    
     p = strchr(buf, '&');
     *p = '\0';
     strcpy(arg1, buf);
@@ -22,7 +25,7 @@ int main(void)
   }
 
   /* Make the response body */
-  sprintf(content, "QUERY_STRING=%s\r\n<p>", buf);
+  sprintf(content, "QUERY_STRING=%s\r\n<p>", query_copy);
   sprintf(content + strlen(content), "Welcome to add.com: ");
   sprintf(content + strlen(content), "THE Internet addition portal.\r\n<p>");
   sprintf(content + strlen(content), "The answer is: %d + %d = %d\r\n<p>",
