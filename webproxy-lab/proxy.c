@@ -1,9 +1,6 @@
 #include <stdio.h>
 #include "csapp.h"
-
-/* Recommended max cache and object sizes */
-#define MAX_CACHE_SIZE 1049000
-#define MAX_OBJECT_SIZE 102400
+#include "cache.h"
 
 /* You won't lose style points for including this long line in your code */
 static const char *user_agent_hdr =
@@ -15,46 +12,48 @@ void parse_uri(char *uri, char *hostname, char *port, char *query);
 void read_requesthdrs(rio_t *rp, char *headers, char *hostname);
 void send_request(int serverfd, char *method, char *query, char *headers);
 
-void sigchld_handler(int sig) {
-    while (waitpid(-1, 0, WNOHANG) > 0)
-        ;
-    return;
+void *thread(void *vargp) {
+    int connfd = *((int *)vargp);
+    Pthread_detach(pthread_self());
+    Free(vargp);
+
+    doit(connfd);
+    Close(connfd);
+    return NULL;
 }
 
 int main(int argc, char **argv) {
-    int listenfd, connfd;
-    char hostname[MAXLINE], port[MAXLINE];
+    int listenfd, *connfdp;
     socklen_t clientlen;
     struct sockaddr_storage clientaddr;
+    char hostname[MAXLINE], port[MAXLINE];
+    pthread_t tid;
 
     if (argc != 2) {
         fprintf(stderr, "usage: %s <port>\n", argv[0]);
         exit(1);
     }
 
-    Signal(SIGCHLD, sigchld_handler);
+    cache_init();
     listenfd = Open_listenfd(argv[1]);
     while (1) {
         clientlen = sizeof(clientaddr);
-        connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
+        connfdp = Malloc(sizeof(int));
+        *connfdp = Accept(listenfd, (SA *)&clientaddr, &clientlen);
         Getnameinfo((SA *)&clientaddr, clientlen, hostname, MAXLINE, port, MAXLINE, 0);
         printf("Accepted connection from (%s %s)\n", hostname, port);
 
-        if (Fork() == 0) {
-            Close(listenfd);
-            doit(connfd);
-            Close(connfd);
-            exit(0);
-        }
-        Close(connfd);
+        Pthread_create(&tid, NULL, thread, connfdp);
     }
 }
 
 void doit(int clientfd) {
     int serverfd;
     char buf[MAXLINE], method[MAXLINE], uri[MAXLINE], version[MAXLINE];
+    char original_uri[MAXLINE];
     char headers[MAXBUF];
     char hostname[MAXLINE], port[MAXLINE], query[MAXLINE];
+    char cache_buf[MAX_OBJECT_SIZE];
     rio_t client_rio, server_rio;
 
     Rio_readinitb(&client_rio, clientfd);
@@ -62,6 +61,15 @@ void doit(int clientfd) {
     printf("Request headers:\n");
     printf("%s", buf);
     sscanf(buf, "%s %s %s", method, uri, version);
+    strcpy(original_uri, uri);
+
+    int cached_size = cache_find(original_uri, cache_buf);
+    if (cached_size > 0) {
+        printf("Cache HIT: %s\n", uri);
+        Rio_writen(clientfd, cache_buf, cached_size);
+        return;
+    }
+    printf("Cache MISS: %s\n", uri);
 
     parse_uri(uri, hostname, port, query);
     read_requesthdrs(&client_rio, headers, hostname);
@@ -73,9 +81,25 @@ void doit(int clientfd) {
     send_request(serverfd, method, query, headers);
     Rio_readinitb(&server_rio, serverfd);
 
+    char object_buf[MAX_OBJECT_SIZE];
+    size_t total_size = 0;
+    int cacheable = 1;
     int n;
+    
     while ((n = Rio_readnb(&server_rio, buf, MAXLINE)) > 0) {
         Rio_writen(clientfd, buf, n);
+
+        if (cacheable && (total_size + n <= MAX_OBJECT_SIZE)) {
+            memcpy(object_buf + total_size, buf, n);
+            total_size += n;
+        } else {
+            cacheable = 0;
+        }
+    }
+
+    if (cacheable && (total_size > 0)) {
+        printf("Caching: %s (%zu bytes)\n", uri, total_size);
+        cache_insert(original_uri, object_buf, total_size);
     }
 
     Close(serverfd);
