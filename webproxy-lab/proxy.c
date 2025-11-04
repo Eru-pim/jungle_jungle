@@ -15,6 +15,12 @@ void parse_uri(char *uri, char *hostname, char *port, char *query);
 void read_requesthdrs(rio_t *rp, char *headers, char *hostname);
 void send_request(int serverfd, char *method, char *query, char *headers);
 
+void sigchld_handler(int sig) {
+    while (waitpid(-1, 0, WNOHANG) > 0)
+        ;
+    return;
+}
+
 int main(int argc, char **argv) {
     int listenfd, connfd;
     char hostname[MAXLINE], port[MAXLINE];
@@ -26,13 +32,20 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
+    Signal(SIGCHLD, sigchld_handler);
     listenfd = Open_listenfd(argv[1]);
     while (1) {
         clientlen = sizeof(clientaddr);
         connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
         Getnameinfo((SA *)&clientaddr, clientlen, hostname, MAXLINE, port, MAXLINE, 0);
         printf("Accepted connection from (%s %s)\n", hostname, port);
-        doit(connfd);
+
+        if (Fork() == 0) {
+            Close(listenfd);
+            doit(connfd);
+            Close(connfd);
+            exit(0);
+        }
         Close(connfd);
     }
 }
